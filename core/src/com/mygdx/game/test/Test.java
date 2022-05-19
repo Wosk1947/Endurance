@@ -3,6 +3,7 @@ package com.mygdx.game.test;
 import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.*;
+import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.graphics.g3d.*;
@@ -15,29 +16,29 @@ import com.badlogic.gdx.graphics.g3d.environment.DirectionalLight;
 import com.badlogic.gdx.graphics.g3d.utils.CameraInputController;
 import com.badlogic.gdx.graphics.g3d.utils.MeshPartBuilder;
 import com.badlogic.gdx.graphics.g3d.utils.ModelBuilder;
+import com.badlogic.gdx.math.Matrix4;
 import com.badlogic.gdx.math.Quaternion;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.utils.ScreenUtils;
 import sun.rmi.runtime.Log;
 
+import java.awt.*;
+import java.awt.event.InputEvent;
 import java.util.ArrayList;
 import java.util.List;
 
 public class Test extends ApplicationAdapter {
 
 	public PerspectiveCamera cam;
-	final float[] startPos = {40f, 8f, -5f};
+	final float[] startPos = {30f, 15f, -25f};
 
 	public Model model;
 	public Model model2;
 	public ModelInstance instance;
 	public ModelInstance instance2;
-
 	public Model platform;
 	public ModelInstance platformInstance;
-
 	public ModelBatch modelBatch;
-
 	public Environment environment;
 
 	Texture groundTexture;
@@ -48,7 +49,6 @@ public class Test extends ApplicationAdapter {
 	TextureRegion treeTextureRegion;
 	TextureRegion pineTextureRegion;
 	TextureRegion bushTextureRegion;
-	TextureRegion treeTexture2Region;
 	Texture skyBox;
 	TextureRegion skyBoxRegion;
 	Decal tree;
@@ -65,38 +65,24 @@ public class Test extends ApplicationAdapter {
 
 	public Model wheel;
 	public ModelInstance wheelInstance;
-
 	public ModelInstance wheelInstance2;
 
-	public Model marker;
-	public ModelInstance markerInstance;
-	public ModelInstance markerInstance2;
+	public Model body;
+	public ModelInstance bodyInstance;
 
-	Vector3 axesPosition = new Vector3(50f,10,21);
-	Vector3 axesPosition2 = new Vector3(38f,10,21);
-	Vector3 oldAxesPosition = new Vector3(50,10,21);
-	Vector3 preCollisionAxesPosition = new Vector3(50,10,21);
-	Vector3 lastCollisionAxesPosition = new Vector3();
+	Vector3 axesPosition = new Vector3(18f,10,21);
+	Vector3 axesPosition2 = new Vector3(6f,10,21);
 	Vector3 axesRotation = new Vector3(0,0,1);
 	Vector3 velocity = new Vector3(0,0,0);
-	Vector3 velocityIncr = new Vector3(0,0,0);
-	Vector3 acceleration = new Vector3(0,0,0);
-	Vector3 translation = new Vector3(0,0,0);
+	Vector3 velocity2 = new Vector3(0,0,0);
 
-	float friction = 1.0f;
-
-	float dt;
-	float oldDt;
-
-	Wheel wheelPhys = new Wheel(3f,15,axesPosition,axesRotation,velocity, 12f);
-	Wheel wheelPhys2 = new Wheel(2f,15,axesPosition2,axesRotation,velocity, 12f);
+	Wheel wheelPhys = new Wheel("Wheel1",3f,15,axesPosition,axesRotation,velocity, 12f);
+	Wheel wheelPhys2 = new Wheel("Wheel2",3f,15,axesPosition2,axesRotation,velocity2, 12f);
+	WheelsController wheelsController = new WheelsController(wheelPhys, wheelPhys2);
 
 
 	@Override
 	public void create () {
-
-
-
 		skyBox = new Texture("horizon-sky-and-landscape-in-chequamegon-national-forest-wisconsin_800.jpg");
 		skyBoxRegion = new TextureRegion(skyBox);
 
@@ -108,7 +94,6 @@ public class Test extends ApplicationAdapter {
 
 		bushTexture = new Texture("SeekPng.com_desert-bush-png_1091473.png");
 		bushTextureRegion = new TextureRegion(bushTexture);
-
 
 		groundTexture = new Texture("forest-floor-terrain_0010_01_S_enl.jpg");
 		groundTexture.setWrap(Texture.TextureWrap.Repeat, Texture.TextureWrap.Repeat);
@@ -146,29 +131,29 @@ public class Test extends ApplicationAdapter {
 			}
 		}
 
-		for (int i=0;i<500;i++){
+		for (int i=0;i<50;i++){
 			tree = Decal.newDecal(treeTextureRegion, true);
 			tree.setScale(0.12f);
-			float x = 1000f*(float)Math.random();
-			float z = 1000f*(float)Math.random();
+			float x = 100f*(float)Math.random();
+			float z = 50+1000f*(float)Math.random();
 			tree.setPosition(x, 40+ ground[Math.round(x/10)][Math.round(z/10)], z);
 			trees.add(tree);
 		}
 
-		for (int i=0;i<500;i++){
+		for (int i=0;i<50;i++){
 			tree = Decal.newDecal(pineTextureRegion, true);
 			tree.setScale(0.032f);
-			float x = 1000f*(float)Math.random();
-			float z = 1000f*(float)Math.random();
+			float x = 100f*(float)Math.random();
+			float z = 50+1000f*(float)Math.random();
 			tree.setPosition(x, 15+ ground[Math.round(x/10)][Math.round(z/10)], z);
 			trees.add(tree);
 		}
 
-		for (int i=0;i<2000;i++){
+		for (int i=0;i<200;i++){
 			tree = Decal.newDecal(bushTextureRegion, true);
 			tree.setScale(0.008f);
-			float x = 1000f*(float)Math.random();
-			float z = 1000f*(float)Math.random();
+			float x = 100f*(float)Math.random();
+			float z = 50+1000f*(float)Math.random();
 			tree.setPosition(x, 1+ ground[Math.round(x/10)][Math.round(z/10)], z);
 			trees.add(tree);
 		}
@@ -238,90 +223,44 @@ public class Test extends ApplicationAdapter {
 
 		ModelBuilder wheelBuilder = new ModelBuilder();
 		wheel = wheelBuilder.createCylinder(4f, 1f, 4f, 100,
-				new Material(ColorAttribute.createDiffuse(Color.DARK_GRAY)),
+				new Material(ColorAttribute.createDiffuse(Color.BLACK)),
 				VertexAttributes.Usage.Position | VertexAttributes.Usage.Normal);
 		wheelInstance = new ModelInstance(wheel);
 		wheelInstance.transform.translate(axesPosition);
 		wheelInstance2 = new ModelInstance(wheel);
 		wheelInstance2.transform.translate(axesPosition2);
 
-		ModelBuilder markerBuilder = new ModelBuilder();
-		marker = markerBuilder.createSphere(0.5f, 0.5f, 0.5f, 100, 100,
-				new Material(ColorAttribute.createDiffuse(Color.RED)),
-				VertexAttributes.Usage.Position | VertexAttributes.Usage.Normal);
-		markerInstance = new ModelInstance(marker);
-		markerInstance2 = new ModelInstance(marker);
-
-		markerInstance.transform.setToTranslation(axesPosition);
-		markerInstance2.transform.setToTranslation(axesPosition);
-
-
 		wheelPhys.connectedWheel = wheelPhys2;
 		wheelPhys2.connectedWheel = wheelPhys;
 
+		ModelBuilder bodyBuilder = new ModelBuilder();
+		body = bodyBuilder.createBox(12,1,0.5f,
+				new Material(ColorAttribute.createDiffuse(Color.DARK_GRAY)),
+				VertexAttributes.Usage.Position | VertexAttributes.Usage.Normal);
+		bodyInstance = new ModelInstance(body);
+		bodyInstance.transform.translate(axesPosition);
 	}
 
 	@Override
 	public void render () {
-		Gdx.graphics.setWindowedMode(640,480);
-		Gdx.gl20.glViewport(0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
-		Gdx.gl20.glClear(GL20.GL_COLOR_BUFFER_BIT | GL20.GL_DEPTH_BUFFER_BIT);
-		Gdx.gl20.glEnable(GL20.GL_DEPTH_TEST);
-		Gdx.gl20.glEnable(GL20.GL_TEXTURE_2D);
-		Gdx.gl20.glEnable(GL20.GL_BLEND);
-		Gdx.gl20.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
-		Gdx.gl20.glCullFace(GL20.GL_NONE);
-
-		camController.update();
-
-		modelBatch.begin(cam);
-		modelBatch.render(instance, environment);
-		modelBatch.render(instance2, environment);
-		modelBatch.render(wheelInstance, environment);
-		modelBatch.render(wheelInstance2, environment);
-		//modelBatch.render(markerInstance, environment);
-		//modelBatch.render(markerInstance2, environment);
-		modelBatch.render(platformInstance, environment);
-		modelBatch.end();
-
-		Gdx.gl20.glDepthMask(false);
-		for (Decal decal:trees) {
-			batch.add(decal);
-		}
-		sky = Decal.newDecal(skyBoxRegion);
-		sky.setScale(10f);
-		sky.setPosition(500f, -1000f, 1000f);
-		batch.add(sky);
-		batch.flush();
-		Gdx.gl20.glDepthMask(true);
-
-
-		////Wheel physics
-
-		//Parameters
-		float dt = Gdx.graphics.getDeltaTime()*1;
-
-		//START
-
-		//Forces
-		Vector3 gravitationalForce = new Vector3(0,-15*30,0);
-
-		//Cumulative Force
-		Vector3 force = new Vector3(Vector3.Zero);
-		force.add(gravitationalForce);
-
-		wheelPhys.addIncomingForce(force);
-		//wheelPhys2.addIncomingForce(force);
-		wheelPhys.nextFrame(1/30f);
-		//wheelPhys2.nextFrame(dt);
-		wheelPhys.axesPosition.set(wheelPhys.correctedPosition(wheelPhys.axesPosition,new Vector3(38f,10,21),wheelPhys.baseLength));
-		System.out.print(" After Correction Axes: "+wheelPhys.axesPosition+" ");
-		System.out.println();
-		//wheelPhys2.axesPosition.set(wheelPhys2.correctedPosition(wheelPhys2.axesPosition,wheelPhys.axesPosition,wheelPhys2.baseLength));
+		prepareFrame();
+		renderModels();
+		renderDecals();
+		wheelsController.nextFrame();
 		wheelInstance.transform.setToRotation(Vector3.Y,wheelPhys.axesRotation).setTranslation(wheelPhys.axesPosition);
-		//wheelInstance2.transform.setToRotation(Vector3.Y,wheelPhys2.axesRotation).setTranslation(wheelPhys2.axesPosition);
-
-
+		wheelInstance2.transform.setToRotation(Vector3.Y,wheelPhys2.axesRotation).setTranslation(wheelPhys2.axesPosition);
+		Vector3 bodyPosition = new Vector3();
+		bodyPosition.set(wheelPhys2.axesPosition);
+		bodyPosition.sub(wheelPhys.axesPosition);
+		bodyPosition.scl(0.5f);
+		bodyPosition.add(wheelPhys.axesPosition);
+		Vector3 bodyVector = new Vector3();
+		bodyVector.set(wheelPhys.axesPosition);
+		bodyVector.sub(wheelPhys2.axesPosition);
+		double angle = Math.atan(bodyVector.y/bodyVector.x);
+		//bodyInstance.transform.setToRotation(Vector3.Y,Vector3.Y);
+		bodyInstance.transform.setToRotationRad(Vector3.Z, (float)angle);
+		bodyInstance.transform.setTranslation(bodyPosition);
 	}
 	
 	@Override
@@ -332,18 +271,52 @@ public class Test extends ApplicationAdapter {
 		batch.dispose();
 	}
 
+	public void prepareFrame(){
+		Gdx.graphics.setWindowedMode(1920,1280);
+		Gdx.gl20.glViewport(0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
+		Gdx.gl20.glClear(GL20.GL_COLOR_BUFFER_BIT | GL20.GL_DEPTH_BUFFER_BIT);
+		Gdx.gl20.glEnable(GL20.GL_DEPTH_TEST);
+		Gdx.gl20.glEnable(GL20.GL_TEXTURE_2D);
+		Gdx.gl20.glEnable(GL20.GL_BLEND);
+		Gdx.gl20.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
+		Gdx.gl20.glCullFace(GL20.GL_NONE);
+		camController.update();
+	}
+
+	public void renderModels(){
+		modelBatch.begin(cam);
+		modelBatch.render(instance, environment);
+		modelBatch.render(instance2, environment);
+		modelBatch.render(wheelInstance, environment);
+		modelBatch.render(wheelInstance2, environment);
+		//modelBatch.render(platformInstance, environment);
+		modelBatch.render(bodyInstance, environment);
+		modelBatch.end();
+	}
+
+	public void renderDecals(){
+		Gdx.gl20.glDepthMask(false);
+		for (Decal decal:trees) {
+			batch.add(decal);
+		}
+		sky = Decal.newDecal(skyBoxRegion);
+		sky.setScale(10f);
+		sky.setPosition(500f, -1000f, 1000f);
+		batch.add(sky);
+		batch.flush();
+		Gdx.gl20.glDepthMask(true);
+	}
+
 
 	public float groundHeight(float x, float y){
 		return (float)(Math.sin((x/8)*Math.PI+(y/8)*Math.PI)+2*Math.sin((x/16)*Math.PI-(y/16)*Math.PI));
-		//return x*0.5f;
 	}
 
 	public static float groundHeightWithPlatforms(float x, float y){
-		if ((x<=53+2.5f&&x>=53-2.5f)&&(y<=21+2.5f&&y>=21-2.5f)){
-			return 4+0.1f;
-		}
+		//if ((x<=53+2.5f&&x>=53-2.5f)&&(y<=21+2.5f&&y>=21-2.5f)){
+		//	return 4+0.1f;
+		//}
 		return (float)(Math.sin((x/8)*Math.PI+(y/8)*Math.PI)+2*Math.sin((x/16)*Math.PI-(y/16)*Math.PI));
-		//return x*0.5f;
 	}
 
 	public float groundDx(float x, float y){
@@ -355,8 +328,60 @@ public class Test extends ApplicationAdapter {
 	}
 
 }
+class WheelsController{
+	Wheel wheel1;
+	Wheel wheel2;
+	WheelsController(Wheel wheel1, Wheel wheel2){
+		this.wheel1 = wheel1;
+		this.wheel2 = wheel2;
+	}
+	public void nextFrame(){
+		wheel1.subFramePositionsWithoutBaseCorrections();
+		wheel2.subFramePositionsWithoutBaseCorrections();
+		Vector3 gravitationalForce = new Vector3(0,-30f*9f,0);
+		Vector3 engineForce = new Vector3(120f,0,0);
+		Vector3 force = new Vector3(Vector3.Zero);
+		force.add(gravitationalForce);
+		force.add(engineForce);
+		wheel1.addIncomingForce(force);
+		wheel2.addIncomingForce(force);
+		wheel1.processCollisionForceFriction(1/30f);
+		wheel2.processCollisionForceFriction(1/30f);
+		wheel1.processBond();
+		wheel2.processBond();
+		exchangeImpulses();
+		wheel1.setFinalVelocityAndTranslate();
+		wheel2.setFinalVelocityAndTranslate();
+		applyCorrection();
+	}
+
+	public void applyCorrection(){
+		Vector3 wheel1AxesPosition = new Vector3();
+		Vector3 wheel2AxesPosition = new Vector3();
+		wheel1AxesPosition.set(wheel1.axesPosition);
+		wheel2AxesPosition.set(wheel2.axesPosition);
+		wheel1.axesPosition.set(wheel1.correctedPosition(wheel1AxesPosition, wheel2AxesPosition, 2));
+		wheel2.axesPosition.set(wheel2.correctedPosition(wheel2AxesPosition, wheel1AxesPosition, 2));
+		wheel1.inCollision = false;
+		wheel2.inCollision = false;
+	}
+
+	public void exchangeImpulses(){
+		Vector3 normalImpulse1 = new Vector3();
+		Vector3 normalImpulse2 = new Vector3();
+		normalImpulse1.set(wheel1.bondVelocities.get(1));
+		normalImpulse2.set(wheel2.bondVelocities.get(1));
+		normalImpulse1.scl(0.5f);
+		normalImpulse2.scl(0.5f);
+		wheel1.bondVelocities.get(1).scl(0.5f);
+		wheel2.bondVelocities.get(1).scl(0.5f);
+		wheel1.bondVelocities.get(1).add(normalImpulse2);
+		wheel2.bondVelocities.get(1).add(normalImpulse1);
+	}
+}
 
 class Wheel{
+	public String name;
 	public Vector3 axesPosition = new Vector3(50,10,21);
 	public Vector3 oldAxesPosition = new Vector3(50,10,21);
 	public Vector3 preCollisionAxesPosition = new Vector3(50,10,21);
@@ -368,153 +393,101 @@ class Wheel{
 	public Vector3 translation = new Vector3(0,0,0);
 	public float radius;
 	public Vector3 force = new Vector3(Vector3.Zero);
-	public float oldDt;
 	public float dt;
 	public float wheelMass;
-	public float g=30f;
-	public float friction = 1.0f;
-	public List<Vector3> subFramePositions = new ArrayList<>();
-	public List<Vector3> subFrameRotations = new ArrayList<>();
+	public float friction = 0.98f;
+	public List<Vector3> subFramePositionsWithoutBaseCorrections = new ArrayList<>();
 	public Wheel connectedWheel;
 	public int subFrames = 5;
 	public float baseLength;
+	List<Vector3> intersectionPoints = new ArrayList<>();
+	public List<Vector3> bondVelocities = new ArrayList<>();
+	public boolean inCollision = false;
 
-	public void nextFrame(float dt){
+
+	public void processCollisionForceFriction(float dt){
 		this.dt = dt;
-
-		List<Vector3> subFramePositionsWithoutBaseCorrections1 = subFramePositionsWithoutBaseCorrections(subFrames, translation, oldAxesPosition);
-		System.out.print(" SubFrames: "+subFramePositionsWithoutBaseCorrections1);
-		//List<Vector3> subFramePositionsWithoutBaseCorrections2 = connectedWheel.subFramePositionsWithoutBaseCorrections(subFrames, connectedWheel.translation, connectedWheel.oldAxesPosition);
-		List<Vector3> subFramePositionsWithoutBaseCorrections2 = new ArrayList<>();
-		subFramePositionsWithoutBaseCorrections2.add(new Vector3(38f,10,21));
-		subFramePositionsWithoutBaseCorrections2.add(new Vector3(38f,10,21));
-		subFramePositionsWithoutBaseCorrections2.add(new Vector3(38f,10,21));
-		subFramePositionsWithoutBaseCorrections2.add(new Vector3(38f,10,21));
-		subFramePositionsWithoutBaseCorrections2.add(new Vector3(38f,10,21));
-		subFramePositionsWithoutBaseCorrections2.add(new Vector3(38f,10,21));
-		List<Vector3> subFramePositionsWithCorrections = subFramePositionsWithCorrections(subFramePositionsWithoutBaseCorrections1, subFramePositionsWithoutBaseCorrections2, baseLength);
-		List<Vector3> intersectionPoints = wheelGroundIntersectionPoints(oldAxesPosition, axesRotation, radius, subFramePositionsWithCorrections);
-
-
-
-		/*
-		if (intersectionPoints.size()>0) {
-			markerInstance.transform.setToTranslation(intersectionPoints.get(0));
-			markerInstance2.transform.setToTranslation(intersectionPoints.get(intersectionPoints.size()-1));
+		resolveCollision();
+		if (intersectionPoints.size()==0) {
+			increaseVelocityByExternalForce(dt);
 		}
-		 */
+		applyFriction();
+	}
 
-		System.out.print("Velocity before collision: "+velocity+" ");
+	public void processBond(){
+		bondVelocities = velocitiesForBond(velocity, oldAxesPosition, connectedWheel.oldAxesPosition);
+	}
 
-		//Collision impulse resolution
+	public void setFinalVelocityAndTranslate(){
+		velocity.set(bondVelocities.get(0));
+		velocity.add(bondVelocities.get(1));
+		translate();
+		resetValues();
+	}
+
+	public void translate(){
+		translation.set(velocity);
+		translation.scl(dt);
+		if (intersectionPoints.size() > 0) {
+			axesPosition.set(preCollisionAxesPosition);
+		}
+		oldAxesPosition.set(axesPosition);
+		axesPosition.add(translation);
+	}
+
+	public void resetValues(){
+		force.set(Vector3.Zero);
+		intersectionPoints.clear();
+	}
+
+	public void applyFriction(){
+		if (intersectionPoints.size() == 0) {
+			velocity.scl(friction);
+		}
+	}
+
+	public void resolveCollision(){
+		intersectionPoints = wheelGroundIntersectionPoints(oldAxesPosition,axesRotation,radius,subFramePositionsWithoutBaseCorrections);
 		Vector3 reactionVector = new Vector3();
 		if (intersectionPoints.size()>0){
-
+			inCollision = true;
 			reactionVector.set(wheelGroundReactionVector(lastCollisionAxesPosition,intersectionPoints));
-			System.out.print("Axis: "+axesPosition+" IntersectionPoints: "+intersectionPoints+" Reaction Vector: "+reactionVector+" ");
 			Vector3 oldVelocity = new Vector3();
 			oldVelocity.set(velocity);
 			velocity.set(velocityAfterCollision(reactionVector,oldVelocity));
 		}
+	}
 
-		System.out.print("Velocity after collision: "+velocity+" ");
-
-
-		//Process Force
-		/*
-		if (intersectionPoints.size()>0){
-			Vector3 oldForce = new Vector3();
-			oldForce.set(force);
-			force.set(tangentForce(reactionVector,oldForce));
-		}
-		 */
-
-
-
-	//	System.out.print("Force: "+force+" DT: "+dt+" ");
-
+	public void increaseVelocityByExternalForce(float dt){
 		acceleration.set(force);
 		acceleration.scl(1/wheelMass);
 		velocityIncr.set(acceleration);
 		velocityIncr.scl(dt);
 		velocity.add(velocityIncr);
-		if (intersectionPoints.size()==0) {
-			velocity.scl(friction);
-		}
-//		System.out.print("VelocityIncr: "+velocityIncr+" ");
-
-//		List<Vector3> velocities = velocitiesForBond(velocity, oldAxesPosition, connectedWheel.oldAxesPosition);
-		List<Vector3> velocities = velocitiesForBond(velocity, oldAxesPosition, new Vector3(38f,10,21));
-		velocities.get(1).scl(0.0f);
-		velocities.get(0).scl(velocity.len()/velocities.get(0).len());
-		velocity.set(velocities.get(0));
-		velocity.add(velocities.get(1));
-
-//		System.out.print("Velocity projections: "+velocities+" ");
-//		System.out.print("Final Velocity: "+velocity+" ");
-
-
-		translation.set(velocity);
-		translation.scl(dt);
-
-		System.out.print("Translation: "+translation+" ");
-
-		System.out.print("OldAxes: "+axesPosition+" ");
-		System.out.print("PreCollision: "+preCollisionAxesPosition+" ");
-
-		if (intersectionPoints.size() > 0) {
-			axesPosition.set(preCollisionAxesPosition);
-		}
-
-
-
-		oldAxesPosition.set(axesPosition);
-		axesPosition.add(translation);
-
-		System.out.print("NewAxes: "+axesPosition+" ");
-
-		//axesPosition.set(correctedPosition(axesPosition,connectedWheel.axesPosition,baseLength));
-
-		force.set(Vector3.Zero);
-
 	}
 
-	public  List<Vector3> subFramePositionsWithoutBaseCorrections(int n, Vector3 translation, Vector3 axesPosition){
+	public void subFramePositionsWithoutBaseCorrections(){
 		List<Vector3> subFramePositionsWithoutCorrections = new ArrayList<>();
-		for (int i = 0; i <= n; i++){
+		for (int i = 0; i <= subFrames; i++){
 			Vector3 subTranslation = new Vector3();
 			subTranslation.set(translation);
-			subTranslation.scl((float)i/n);
+			subTranslation.scl((float)i/subFrames);
 			Vector3 subPosition = new Vector3();
 			subPosition.set(axesPosition);
 			subPosition.add(subTranslation);
 			subFramePositionsWithoutCorrections.add(subPosition);
 		}
-		//System.out.print(" POSITIONS SIZE NOT CORRECTED: "+subFramePositionsWithoutCorrections);
-		return subFramePositionsWithoutCorrections;
+		this.subFramePositionsWithoutBaseCorrections = subFramePositionsWithoutCorrections;
 	}
 
-	public  List<Vector3> subFramePositionsWithCorrections(List<Vector3> subFramePositionsWithoutCorrections1, List<Vector3> subFramePositionsWithoutCorrections2, float baseLength){
-		List<Vector3> subFramePositionsWithCorrections = new ArrayList<>();
-		subFramePositionsWithCorrections.add(subFramePositionsWithoutCorrections1.get(0));
-		for (int i = 1; i < subFramePositionsWithoutCorrections1.size(); i++) {
-			Vector3 position1 = new Vector3();
-			Vector3 position2 = new Vector3();
-			position1.set(subFramePositionsWithoutCorrections1.get(i));
-			position2.set(subFramePositionsWithoutCorrections2.get(i));
-			subFramePositionsWithCorrections.add(correctedPosition(position1, position2, baseLength));
-		}
-		return subFramePositionsWithCorrections;
-	}
-
-	public Vector3 correctedPosition(Vector3 position1, Vector3 position2, float baseLength){
+	public Vector3 correctedPosition(Vector3 position1, Vector3 position2, float factor){
 		Vector3 newPosition1 = new Vector3();
 		newPosition1.set(position1);
 		Vector3 positionDiff = new Vector3();
 		positionDiff.set(position2);
 		positionDiff.sub(position1);
 		float baseDeformedLength = positionDiff.len();
-		float correction = (baseLength - baseDeformedLength)/2;
+		float correction = (baseLength - baseDeformedLength)/factor;
 		Vector3 correctionVector = new Vector3();
 		if (correction < 0) {
 			correctionVector.set(positionDiff);
@@ -535,7 +508,7 @@ class Wheel{
 		float normalProjectionLength = vector.dot(centripetalVector)/centripetalVectorLength;
 		Vector3 normalVector = new Vector3();
 		normalVector.set(centripetalVector);
-		normalVector.scl(normalProjectionLength*1/normalVector.len());
+		normalVector.scl(normalProjectionLength/centripetalVectorLength);
 		Vector3 tangentialVector = new Vector3();
 		tangentialVector.set(vector);
 		tangentialVector.sub(normalVector);
@@ -544,41 +517,28 @@ class Wheel{
 		return vectors;
 	}
 
-	public List<Vector3> forcesForBond(Vector3 force, Vector3 axesPosition1, Vector3 axesPosition2){
-		List<Vector3> forces = new ArrayList<>();
-		Vector3 centripetalVector = new Vector3();
-		centripetalVector.set(axesPosition2);
-		centripetalVector.sub(axesPosition1);
-		forces = tangentialNormalVectors(force, centripetalVector);
-		return forces;
-	}
-
 	public List<Vector3> velocitiesForBond(Vector3 velocity, Vector3 axesPosition1, Vector3 axesPosition2){
-		List<Vector3> velocities = new ArrayList<>();
+		List<Vector3> orthoVelocities = new ArrayList<>();
 		Vector3 centripetalVector = new Vector3();
 		centripetalVector.set(axesPosition2);
 		centripetalVector.sub(axesPosition1);
-		velocities = tangentialNormalVectors(velocity, centripetalVector);
-		return velocities;
+		orthoVelocities = tangentialNormalVectors(velocity, centripetalVector);
+		return orthoVelocities;
 	}
 
-	Wheel(float radius, float wheelMass, Vector3 axesPosition, Vector3 axesRotation, Vector3 velocity, float baseLength){
+	Wheel(String name, float radius, float wheelMass, Vector3 axesPosition, Vector3 axesRotation, Vector3 velocity, float baseLength){
+		this.name = name;
 		this.axesPosition = axesPosition;
 		this.axesRotation = axesRotation;
 		this.velocity = velocity;
 		this.radius = radius;
 		this.wheelMass = wheelMass;
 		this.baseLength = baseLength;
+		this.oldAxesPosition = axesPosition;
 	}
 
 	public void addIncomingForce(Vector3 force){
 		this.force.add(force);
-	}
-
-	public Vector3 outcomingForce(Vector3 point){
-		Vector3 outForce = new Vector3();
-
-		return outForce;
 	}
 
 	public List<Vector3> wheelGroundIntersectionPoints(Vector3 oldAxesPosition, Vector3 axesRotation, float radius, List<Vector3> subFramePositions) {
@@ -592,14 +552,11 @@ class Wheel{
 		for(int i=subFramePositions.size()-1; i>=0; i--){
 			Vector3 subFramePosition = subFramePositions.get(i);
 			intersectionPoints = intersectionPoints(subFramePosition, axesRotation, probeVector);
-			System.out.print(" Points size: "+intersectionPoints.size()+" Subframe Num: "+i);
 			if (intersectionPoints.size() > 0){
 				lastCollisionAxesPosition.set(subFramePosition);
 				lastIntersectionPoints = intersectionPoints;
-				System.out.print(" Collision SubFrame: "+i);
 			}else{
 				preCollisionAxesPosition.set(subFramePosition);
-				System.out.print(" Break SubFrame: "+i);
 				break;
 			}
 		}
@@ -640,41 +597,13 @@ class Wheel{
 		N.set(reactionVector);
 		Vector3 V = new Vector3();
 		V.set(velocity);
-
-		System.out.print(" V: "+V+" N: "+ N);
-
 		Vector3 newVelocity = new Vector3(Vector3.Zero);
 		float projectionLength = Math.abs(V.scl(-1).dot(N)/N.len());
-
-		System.out.print(" PRLength: "+projectionLength);
-
 		Vector3 projection = new Vector3();
 		projection.set(N);
 		projection.scl((1f/N.len())*projectionLength);
-
-		System.out.print(" PR: "+projection);
-
 		newVelocity.set(projection.scl(2).add(velocity));
-
-		System.out.print(" newV: "+newVelocity);
-
 		newVelocity.scl(1.0f);
 		return newVelocity;
-	}
-
-	public Vector3 tangentForce (Vector3 reactionVector, Vector3 force){
-		Vector3 N = new Vector3();
-		N.set(reactionVector);
-		Vector3 F = new Vector3();
-		F.set(force);
-		Vector3 tangentForce = new Vector3();
-		tangentForce.set(F);
-		N.scl(-1);
-		float projectionLength = N.dot(F)/N.len();
-		Vector3 projection = new Vector3();
-		projection.set(N);
-		projection.setLength(projectionLength);
-		tangentForce.sub(projection);
-		return tangentForce;
 	}
 }

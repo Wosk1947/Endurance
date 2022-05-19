@@ -4,7 +4,7 @@
 
 ## Introduction
 
-Endurance is an attempt to write a physical engine for simulating two-wheel vehicles from scratch. The name stands for Endurance discipline in motorcycle racing.
+Endurance is an attempt to write a physics engine for simulating two-wheel vehicles from scratch. The name stands for Endurance discipline in motorcycle racing.
 For graphics LibGDX framework is being used. 
 
 ## Changelog
